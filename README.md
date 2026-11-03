@@ -1,6 +1,6 @@
 # Ajaia Assessment
 
-The first slice supports email/password signup and signin, an owned document list, and private Tiptap editing with manual saves.
+The first slice supports email/password signup and signin, an owned document list, and private Tiptap editing with autosave.
 
 ## Application structure
 
@@ -25,7 +25,7 @@ Import or link this project in Vercel as a Next.js app. Set `DATABASE_URL`, `BET
 
 ## Verify the private flow
 
-On the target URL, sign up, create an **Untitled document**, enter text, and select **Save document**. Wait for **Saved**, then refresh and reopen from **Owned**. Confirm the title and text persist. Copy the document URL and open it from a separate browser session signed in as another account. Confirm the other account cannot find or open the document.
+On the target URL, sign up, create an **Untitled document**, enter text, and pause to let autosave run. Wait for **Saved**, then refresh and reopen from **Owned**. Confirm the title and text persist. Copy the document URL and open it from a separate browser session signed in as another account. Confirm the other account cannot find or open the document.
 
 Run `TEST_APP_URL=http://localhost:3000 node --test tests/private-documents.test.mjs` against a running app with a dedicated test database. The smoke test creates two accounts and one document. It checks signup, signin, list isolation, direct URL and API access, persistence, and concurrent writes with the same revision.
 
