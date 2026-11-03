@@ -4,16 +4,16 @@ The first slice supports email/password signup and signin, an owned document lis
 
 ## Application structure
 
-- `src/app` contains Next.js pages, layouts, and API route handlers.
-- `src/frontend` contains interactive React components grouped by feature.
-- `src/backend` contains server-side authentication, session checks, and database access.
-- `src/shared` contains document content definitions used by both sides.
+- `app` contains Next.js pages, layouts, and API route handlers.
+- `frontend` contains interactive React components grouped by feature.
+- `backend` contains server-side authentication, session checks, and database access.
+- `shared` contains document content definitions used by both sides.
 
 ## Local setup
 
 1. Install dependencies with `npm ci`.
 2. Copy `.env.example` to `.env`. Set `DATABASE_URL` to the pooled Postgres connection string from the Neon **Connect** dialog. Generate `BETTER_AUTH_SECRET` with `openssl rand -base64 32`. Set `BETTER_AUTH_URL` to the app origin.
-3. Initialize the Better Auth tables with `npx auth@latest migrate --config src/backend/auth.ts`.
+3. Initialize the Better Auth tables with `npx auth@latest migrate --config backend/auth.ts`.
 4. Apply `db/documents.sql` to the same database using the Neon SQL Editor or `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/documents.sql` after exporting `DATABASE_URL` in your shell.
 5. Run `npm run dev` and open http://localhost:3000.
 

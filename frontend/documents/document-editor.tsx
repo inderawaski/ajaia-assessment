@@ -3,6 +3,7 @@
 import { EditorContent, useEditor, type JSONContent } from "@tiptap/react";
 import { useEffect, useRef, useState } from "react";
 import { documentExtensions } from "@/shared/documents/content";
+import { DocumentFormatting } from "./document-formatting";
 
 export function DocumentEditor({ id, body, revision }: { id: string; body: JSONContent; revision: number }) {
   const savedRevision = useRef(revision);
@@ -65,6 +66,7 @@ export function DocumentEditor({ id, body, revision }: { id: string; body: JSONC
 
   return (
     <>
+      <DocumentFormatting editor={editor} />
       <div className="document-body"><EditorContent editor={editor} /></div>
       <div className="flex flex-wrap items-center gap-3">
         <button onClick={save} disabled={!editor || saving || blocked || status === "Saved"}>Save document</button>

@@ -41,3 +41,11 @@ export async function saveDocumentBody(ownerId: string, id: string, body: JSONCo
   );
   return rows[0];
 }
+
+export async function renameOwnedDocument(ownerId: string, id: string, title: string) {
+  const { rows } = await db.query<Pick<Document, "title">>(
+    "UPDATE documents SET title = $3 WHERE owner_id = $1 AND id = $2 RETURNING title",
+    [ownerId, id, title],
+  );
+  return rows[0];
+}

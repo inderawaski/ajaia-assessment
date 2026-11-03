@@ -2,7 +2,6 @@ import StarterKit from "@tiptap/starter-kit";
 
 export const documentExtensions = [StarterKit.configure({
   link: false,
-  underline: false,
 })];
 
 export function isDocumentId(id: string) {

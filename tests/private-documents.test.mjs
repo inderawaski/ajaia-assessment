@@ -54,6 +54,16 @@ test("only the owner can reopen and update a private document", async () => {
   });
   const text = `Private content ${randomUUID()}`;
   const body = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] };
+  const titleApi = `${api}/title`;
+  const rename = { method: "PATCH", data: { title: "  Formatted document  " } };
+  await request(titleApi, { ...rename, status: 401 });
+  await request(titleApi, { ...rename, cookie: unrelated, status: 404 });
+  await request(titleApi, { ...rename, cookie: owner, data: { title: "   " }, status: 400 });
+  assert.deepEqual(await (await request(api, { cookie: owner, status: 200 })).json(), {
+    id, title: "Untitled document", revision: 0,
+    body: { type: "doc", content: [{ type: "paragraph" }] },
+  });
+
   const data = { body, revision: 0 };
   await request(api, { status: 401 });
   await request(api, { method: "PATCH", data, status: 401 });
@@ -67,8 +77,10 @@ test("only the owner can reopen and update a private document", async () => {
   ]);
   assert.deepEqual(writes.map((response) => response.status).sort(), [200, 409]);
 
+  const renamed = await request(titleApi, { ...rename, cookie: owner, status: 200 });
+  assert.deepEqual(await renamed.json(), { title: "Formatted document" });
   const reopened = await request(api, { cookie: owner, status: 200 });
-  assert.deepEqual(await reopened.json(), { id, title: "Untitled document", revision: 1, body });
+  assert.deepEqual(await reopened.json(), { id, title: "Formatted document", revision: 1, body });
   const ownerPage = await request(page, { cookie: owner, status: 200 });
   assert.ok((await ownerPage.text()).includes(text));
   const deniedPage = await request(page, { cookie: unrelated });
