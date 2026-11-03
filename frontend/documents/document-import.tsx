@@ -1,10 +1,12 @@
 "use client";
 
+import { Button, Modal } from "@heroui/react";
+
 import { useState, type FormEvent } from "react";
 import { readImportFile } from "@/shared/documents/import-file";
 
 export function DocumentImport({ disabled }: { disabled: boolean }) {
-  const [open, setOpen] = useState(false);
+  const [hasFile, setHasFile] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 
@@ -38,21 +40,30 @@ export function DocumentImport({ disabled }: { disabled: boolean }) {
   }
 
   return (
-    <>
-      <button type="button" disabled={disabled || pending} aria-expanded={open}
-        aria-controls="document-import" onClick={() => { setOpen(!open); setError(""); }}>
-        Import file
-      </button>
-      <form id="document-import" hidden={!open} className="w-full" onSubmit={submit}>
-        <fieldset disabled={disabled || pending} className="grid gap-2">
-          <label htmlFor="import-file">Choose a file</label>
-          <p id="import-file-help">One UTF-8 .txt or .md file, up to 1 MB (1,000,000 bytes).</p>
-          <input id="import-file" name="file" type="file" accept=".txt,.md" required
-            aria-describedby="import-file-help" onChange={() => setError("")} />
-          <button type="submit" className="justify-self-start">{pending ? "Importing…" : "Import document"}</button>
-        </fieldset>
-        {error && <p role="alert">{error}</p>}
-      </form>
-    </>
+    <Modal onOpenChange={(open) => { if (open) { setError(""); setHasFile(false); } }}>
+      <Button type="button" isDisabled={disabled || pending}>Import file</Button>
+      <Modal.Backdrop isDismissable={!pending} isKeyboardDismissDisabled={pending}>
+        <Modal.Container placement="center">
+          <Modal.Dialog>
+            <Modal.CloseTrigger isDisabled={pending} />
+            <Modal.Header><Modal.Heading>Import file</Modal.Heading></Modal.Header>
+            <Modal.Body>
+              <form className="grid gap-2" onSubmit={submit}>
+                <fieldset disabled={disabled || pending} className="import-file-picker grid gap-2">
+                                  <p id="import-file-help">Only .txt and .md files are supported, 1 MB max.</p>
+                  <input id="import-file" name="file" type="file" accept=".txt,.md" required
+                    aria-label="File to import" aria-describedby="import-file-help" onChange={(event) => {
+                      setHasFile(Boolean(event.currentTarget.files?.length));
+                      setError("");
+                    }} />
+                  <Button variant="primary" type="submit" isDisabled={!hasFile || pending} className="justify-self-start">{pending ? "Importing…" : "Import document"}</Button>
+                </fieldset>
+                {error && <p role="alert">{error}</p>}
+              </form>
+            </Modal.Body>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal>
   );
 }

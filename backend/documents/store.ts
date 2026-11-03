@@ -43,9 +43,10 @@ export async function createImportedDocument(ownerId: string, title: string, bod
 }
 
 export async function readDocument(user: { id: string; email: string }, id: string) {
-  const { rows } = await db.query<Document & { canRename: boolean }>(
-    `SELECT id, title, body, revision, owner_id = $1 AS "canRename"
-     FROM documents WHERE id = $2 AND (owner_id = $1 OR EXISTS (
+  const { rows } = await db.query<Document & { canRename: boolean; ownerName: string }>(
+    `SELECT d.id, d.title, d.body, d.revision, d.owner_id = $1 AS "canRename", owner.name AS "ownerName"
+     FROM documents d JOIN "user" owner ON owner.id = d.owner_id
+     WHERE d.id = $2 AND (d.owner_id = $1 OR EXISTS (
        SELECT 1 FROM document_grants WHERE document_id = $2 AND recipient_email = $3
      ))`,
     [user.id, id, user.email.toLowerCase()],

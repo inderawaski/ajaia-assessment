@@ -1,5 +1,8 @@
 "use client";
 
+import { Button, Input } from "@heroui/react";
+import { DocumentIcon } from "./document-icon";
+
 import { useEffect, useRef, useState } from "react";
 
 export function DocumentTitle({ id, initialTitle, canRename }: {
@@ -71,7 +74,7 @@ export function DocumentTitle({ id, initialTitle, canRename }: {
 
   return editing ? (
     <div className="grid min-w-0 gap-2">
-      <input
+      <Input
         ref={input}
         aria-label="Document title"
         aria-invalid={Boolean(error)}
@@ -93,9 +96,12 @@ export function DocumentTitle({ id, initialTitle, canRename }: {
       {error && <p id="document-title-error" role="alert">{error}</p>}
     </div>
   ) : (
-    <div className="flex flex-wrap items-center gap-3">
-      <h1 className="min-w-0 break-words">{title}</h1>
-      <button ref={renameButton} onClick={() => setDraft(title)}>Rename</button>
+    <div className="flex items-center gap-3">
+      <h1 className="min-w-0 [overflow-wrap:anywhere]">{title}</h1>
+      <Button isIconOnly variant="secondary" size="sm" className="shrink-0" ref={renameButton}
+        aria-label="Rename document" onClick={() => setDraft(title)}>
+        <DocumentIcon name="rename" />
+      </Button>
     </div>
   );
 }

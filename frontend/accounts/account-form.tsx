@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Input } from "@heroui/react";
+
 import { createAuthClient } from "better-auth/react";
 import { useState, type FormEvent } from "react";
 
@@ -37,18 +39,18 @@ export function AccountForm() {
   return (
     <form onSubmit={submit} className="grid gap-4">
       <h1>{signup ? "Create an account" : "Sign in"}</h1>
-      {signup && <label>Name<input name="name" autoComplete="name" required /></label>}
-      <label>Email<input name="email" type="email" autoComplete="email" required /></label>
+      {signup && <label>Name<Input name="name" autoComplete="name" required /></label>}
+      <label>Email<Input name="email" type="email" autoComplete="email" required /></label>
       <label>
         Password
-        <input name="password" type="password" required minLength={signup ? 8 : undefined}
+        <Input name="password" type="password" required minLength={signup ? 8 : undefined}
           autoComplete={signup ? "new-password" : "current-password"} />
       </label>
       {error && <p role="alert">{error}</p>}
-      <button disabled={pending}>{pending ? "Please wait…" : signup ? "Sign up" : "Sign in"}</button>
-      <button type="button" disabled={pending} onClick={() => { setSignup(!signup); setError(""); }}>
+      <Button className="w-full" type="submit" isDisabled={pending}>{pending ? "Please wait…" : signup ? "Sign up" : "Sign in"}</Button>
+      <Button variant="ghost" className="w-full border-transparent text-accent" type="button" isDisabled={pending} onClick={() => { setSignup(!signup); setError(""); }}>
         {signup ? "Use an existing account" : "Create an account"}
-      </button>
+      </Button>
     </form>
   );
 }

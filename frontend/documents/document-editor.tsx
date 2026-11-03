@@ -1,17 +1,21 @@
 "use client";
 
+import { Button } from "@heroui/react";
+import { DocumentIcon } from "./document-icon";
+
 import { EditorContent, useEditor, type JSONContent } from "@tiptap/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { documentExtensions } from "@/shared/documents/content";
 import { DocumentFormatting } from "./document-formatting";
 
 const SAVE_DELAY_MS = 600;
+const SAVED_NOTICE_MS = 10_000;
 const ACCESS_LOST = "You no longer have access to this document. Your draft is still here.";
 
 type SaveFailure = "retry" | "conflict" | "access" | "session";
 
-export function DocumentEditor({ id, body, revision }: { id: string; body: JSONContent; revision: number }) {
+export function DocumentEditor({ id, body, revision, title, children }: { id: string; body: JSONContent; revision: number; title: ReactNode; children?: ReactNode }) {
   const router = useRouter();
   const savedRevision = useRef(revision);
   const pending = useRef<JSONContent | null>(null);
@@ -19,7 +23,7 @@ export function DocumentEditor({ id, body, revision }: { id: string; body: JSONC
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const failure = useRef<SaveFailure | null>(null);
   const leaving = useRef(false);
-  const [status, setStatus] = useState("Saved");
+  const [status, setStatus] = useState("");
   const [recovery, setRecovery] = useState<SaveFailure | null>(null);
   const [reloading, setReloading] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
@@ -33,7 +37,6 @@ export function DocumentEditor({ id, body, revision }: { id: string; body: JSONC
       pending.current = editor.getJSON();
       if (failure.current || inFlight.current) return;
 
-      setStatus("Waiting to save…");
       clearTimeout(timer.current);
       timer.current = setTimeout(() => void flush(), SAVE_DELAY_MS);
     },
@@ -51,6 +54,12 @@ export function DocumentEditor({ id, body, revision }: { id: string; body: JSONC
       window.removeEventListener("beforeunload", warnIfUnsaved);
     };
   }, []);
+
+  useEffect(() => {
+    if (status !== "Saved") return;
+    const timeout = setTimeout(() => setStatus(""), SAVED_NOTICE_MS);
+    return () => clearTimeout(timeout);
+  }, [status]);
 
   function stopSaving(status: number) {
     const reason = status === 409 ? "conflict" : status === 404 ? "access" : "session";
@@ -150,7 +159,7 @@ export function DocumentEditor({ id, body, revision }: { id: string; body: JSONC
       failure.current = null;
       setRecovery(null);
       setCopyStatus("");
-      setStatus("Saved");
+      setStatus("");
     } catch {
       setStatus("Could not reload the latest version. Your draft is still here.");
     } finally {
@@ -158,8 +167,7 @@ export function DocumentEditor({ id, body, revision }: { id: string; body: JSONC
     }
   }
 
-  async function backToDocuments(event: MouseEvent<HTMLAnchorElement>) {
-    event.preventDefault();
+  async function backToDocuments() {
     if (leaving.current) return;
     leaving.current = true;
 
@@ -176,20 +184,31 @@ export function DocumentEditor({ id, body, revision }: { id: string; body: JSONC
 
   return (
     <>
+      <header className="flex items-start gap-3">
+        <Button isIconOnly variant="tertiary" className="shrink-0"
+          aria-label="Back to documents" onClick={backToDocuments}>
+          <DocumentIcon name="back" />
+        </Button>
+        <div className="flex min-h-10 min-w-0 flex-1 items-center [&>*]:w-full">{title}</div>
+      </header>
+      {children}
       <DocumentFormatting editor={editor} />
       <div className="document-body"><EditorContent editor={editor} /></div>
       <div className="flex flex-wrap items-center gap-3">
-        <span role="status">{status}</span>
-        {recovery === "retry" && <button type="button" onClick={retry}>Retry</button>}
+        <span role={recovery && !reloading ? "alert" : "status"}>{status}</span>
+        {recovery === "retry" && <Button isIconOnly variant="secondary" aria-label="Retry save" onClick={retry}><DocumentIcon name="reload" /></Button>}
         {recovery && recovery !== "retry" && (
-          <button type="button" onClick={copyDraft}>Copy unsaved text</button>
+          <Button isIconOnly={recovery === "session"} variant="secondary" aria-label="Copy unsaved text" onClick={copyDraft}>
+            {recovery === "session" ? <DocumentIcon name="copy" /> : "Copy unsaved text"}
+          </Button>
         )}
         {recovery === "conflict" && (
-          <button type="button" onClick={reloadLatest} disabled={reloading}>Reload latest</button>
+          <Button variant="secondary" onClick={reloadLatest} isDisabled={reloading}>
+            Reload latest
+          </Button>
         )}
       </div>
-      {copyStatus && <p role="status">{copyStatus}</p>}
-      <a href="/dashboard" onClick={backToDocuments}>Back to documents</a>
+      {copyStatus && <p role={copyStatus === "Draft copied." ? "status" : "alert"}>{copyStatus}</p>}
     </>
   );
 }

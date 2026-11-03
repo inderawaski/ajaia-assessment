@@ -1,5 +1,8 @@
 "use client";
 
+import { Button, Modal, Input, Spinner } from "@heroui/react";
+import { DocumentIcon } from "./document-icon";
+
 import { useState } from "react";
 
 export function DocumentSharing({ id }: { id: string }) {
@@ -7,7 +10,6 @@ export function DocumentSharing({ id }: { id: string }) {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const endpoint = `/api/documents/${id}/grants`;
 
   async function load() {
@@ -29,7 +31,6 @@ export function DocumentSharing({ id }: { id: string }) {
     const fallback = method === "POST" ? "Could not grant access. Try again." : "Could not remove access. Try again.";
     setBusy(true);
     setError("");
-    setMessage("");
     try {
       const response = await fetch(endpoint, {
         method,
@@ -45,10 +46,8 @@ export function DocumentSharing({ id }: { id: string }) {
       if (method === "POST") {
         setEmails((current) => [...new Set([...(current ?? []), normalizedEmail])].sort());
         setEmail("");
-        setMessage(`Editing access granted to ${normalizedEmail}.`);
       } else {
         setEmails((current) => current?.filter((entry) => entry !== normalizedEmail) ?? []);
-        setMessage(`Editing access removed for ${normalizedEmail}.`);
       }
     } catch {
       setError(fallback);
@@ -58,42 +57,47 @@ export function DocumentSharing({ id }: { id: string }) {
   }
 
   return (
-    <details className="rounded border p-3" onToggle={(event) => {
-      if (event.currentTarget.open && !busy) void load();
-    }}>
-      <summary className="cursor-pointer">Share editing access</summary>
-      <div className="mt-3 grid gap-3">
-        {error && <p role="alert">{error}</p>}
-        <p role="status">{busy ? "Updating sharing access…" : message}</p>
-        {emails === null ? (
-          !busy && <button type="button" onClick={() => void load()}>Load sharing access</button>
-        ) : (
-          <>
-            <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => {
-              event.preventDefault();
-              void update("POST", email);
-            }}>
-              <label className="grid gap-1">
-                Recipient email
-                <input type="email" value={email} maxLength={254} required disabled={busy}
-                  onChange={(event) => setEmail(event.target.value)} />
-              </label>
-              <button type="submit" disabled={busy}>Grant access</button>
-            </form>
-            {emails.length === 0 ? <p>No recipients have editing access.</p> : (
-              <ul aria-label="Recipients with editing access" className="grid gap-2">
-                {emails.map((address) => (
-                  <li key={address} className="flex flex-wrap items-center gap-2">
-                    <span className="break-all">{address}</span>
-                    <button type="button" disabled={busy} aria-label={`Remove access for ${address}`}
-                      onClick={() => void update("DELETE", address)}>Remove</button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
-      </div>
-    </details>
+    <Modal onOpenChange={(open) => { if (open && !busy) void load(); }}>
+      <Button type="button" variant="primary" className="justify-self-start">Share document</Button>
+      <Modal.Backdrop>
+        <Modal.Container placement="center">
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header><Modal.Heading>Share document</Modal.Heading></Modal.Header>
+            <Modal.Body className="grid gap-3">
+              {error && <p role="alert">{error}</p>}
+              {busy ? (
+                <Spinner size="sm" aria-label="Updating sharing access" />
+              ) : emails === null ? (
+                <Button isIconOnly variant="secondary" aria-label="Load sharing access"
+                  onClick={() => void load()}><DocumentIcon name="reload" /></Button>
+              ) : emails.length > 0 ? (
+                <ul aria-label="Recipients with editing access" className="grid gap-2">
+                  {emails.map((address) => (
+                    <li key={address} className="flex flex-wrap items-center gap-2">
+                      <span className="break-all">{address}</span>
+                      <Button isIconOnly variant="danger" size="sm" type="button"
+                        aria-label={`Remove access for ${address}`}
+                        onClick={() => void update("DELETE", address)}><DocumentIcon name="remove" /></Button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => {
+                event.preventDefault();
+                if (!busy && emails !== null) void update("POST", email);
+              }}>
+                <label className="grid gap-1">
+                  Recipient email
+                  <Input type="email" value={email} maxLength={254} required
+                    onChange={(event) => setEmail(event.target.value)} />
+                </label>
+                <Button type="submit" isDisabled={busy || emails === null}>Grant access</Button>
+              </form>
+            </Modal.Body>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal>
   );
 }
