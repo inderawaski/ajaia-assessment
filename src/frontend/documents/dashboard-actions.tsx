@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { authClient } from "../account-form";
+import { authClient } from "@/frontend/accounts/account-form";
 
 export function DashboardActions() {
   const [pending, setPending] = useState(false);

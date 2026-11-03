@@ -1,7 +1,7 @@
 import { getSchema } from "@tiptap/core";
-import { auth } from "@/lib/auth";
-import { documentExtensions, isDocumentId } from "@/lib/documents/content";
-import { readDocument, saveDocumentBody } from "@/lib/documents/store";
+import { auth } from "@/backend/auth";
+import { documentExtensions, isDocumentId } from "@/shared/documents/content";
+import { readDocument, saveDocumentBody } from "@/backend/documents/store";
 
 const schema = getSchema(documentExtensions);
 

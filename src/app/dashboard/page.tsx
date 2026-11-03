@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import { listOwnedDocuments } from "@/lib/documents/store";
-import { requireSession } from "@/lib/session";
-import { DashboardActions } from "./dashboard-actions";
+import { listOwnedDocuments } from "@/backend/documents/store";
+import { requireSession } from "@/backend/session";
+import { DashboardActions } from "@/frontend/documents/dashboard-actions";
 
 export default function Dashboard() {
   return <Suspense fallback={<p className="p-6">Loading…</p>}><Content /></Suspense>;

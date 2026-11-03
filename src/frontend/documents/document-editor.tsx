@@ -2,7 +2,7 @@
 
 import { EditorContent, useEditor, type JSONContent } from "@tiptap/react";
 import { useEffect, useRef, useState } from "react";
-import { documentExtensions } from "@/lib/documents/content";
+import { documentExtensions } from "@/shared/documents/content";
 
 export function DocumentEditor({ id, body, revision }: { id: string; body: JSONContent; revision: number }) {
   const savedRevision = useRef(revision);

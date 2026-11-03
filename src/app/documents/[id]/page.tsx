@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { isDocumentId } from "@/lib/documents/content";
-import { readDocument } from "@/lib/documents/store";
-import { requireSession } from "@/lib/session";
-import { DocumentEditor } from "./document-editor";
+import { isDocumentId } from "@/shared/documents/content";
+import { readDocument } from "@/backend/documents/store";
+import { requireSession } from "@/backend/session";
+import { DocumentEditor } from "@/frontend/documents/document-editor";
 
 export default function DocumentPage({ params }: PageProps<"/documents/[id]">) {
   return <Suspense fallback={<p className="p-6">Loading…</p>}><Content params={params} /></Suspense>;

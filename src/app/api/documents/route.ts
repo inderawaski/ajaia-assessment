@@ -1,5 +1,5 @@
-import { auth } from "@/lib/auth";
-import { createDocument } from "@/lib/documents/store";
+import { auth } from "@/backend/auth";
+import { createDocument } from "@/backend/documents/store";
 
 export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: request.headers });

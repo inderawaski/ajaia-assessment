@@ -1,5 +1,5 @@
 import type { JSONContent } from "@tiptap/core";
-import { db } from "@/lib/db";
+import { db } from "@/backend/db";
 
 type Document = {
   id: string;
