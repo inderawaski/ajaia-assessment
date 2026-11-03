@@ -7,6 +7,9 @@ import { documentExtensions } from "@/shared/documents/content";
 import { DocumentFormatting } from "./document-formatting";
 
 const SAVE_DELAY_MS = 600;
+const ACCESS_LOST = "You no longer have access to this document. Your draft is still here.";
+
+type SaveFailure = "retry" | "conflict" | "access" | "session";
 
 export function DocumentEditor({ id, body, revision }: { id: string; body: JSONContent; revision: number }) {
   const router = useRouter();
@@ -14,10 +17,12 @@ export function DocumentEditor({ id, body, revision }: { id: string; body: JSONC
   const pending = useRef<JSONContent | null>(null);
   const inFlight = useRef<Promise<boolean> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const failure = useRef<"retry" | "blocked" | null>(null);
+  const failure = useRef<SaveFailure | null>(null);
   const leaving = useRef(false);
   const [status, setStatus] = useState("Saved");
-  const [canRetry, setCanRetry] = useState(false);
+  const [recovery, setRecovery] = useState<SaveFailure | null>(null);
+  const [reloading, setReloading] = useState(false);
+  const [copyStatus, setCopyStatus] = useState("");
 
   const editor = useEditor({
     extensions: documentExtensions,
@@ -47,8 +52,19 @@ export function DocumentEditor({ id, body, revision }: { id: string; body: JSONC
     };
   }, []);
 
+  function stopSaving(status: number) {
+    const reason = status === 409 ? "conflict" : status === 404 ? "access" : "session";
+    failure.current = reason;
+    setRecovery(reason);
+    setStatus({
+      conflict: "A newer version was saved. Your draft is still here.",
+      access: ACCESS_LOST,
+      session: "Your session ended. Copy your draft before signing in again.",
+    }[reason]);
+  }
+
   async function drain() {
-    setCanRetry(false);
+    setRecovery(null);
     setStatus("Saving…");
 
     try {
@@ -61,9 +77,7 @@ export function DocumentEditor({ id, body, revision }: { id: string; body: JSONC
         });
 
         if ([401, 404, 409].includes(response.status)) {
-          failure.current = "blocked";
-          const { error } = await response.json().catch(() => ({}));
-          setStatus(error ?? "This draft could not be saved. Copy your edits before leaving.");
+          stopSaving(response.status);
           return false;
         }
         if (!response.ok) throw new Error("Save failed");
@@ -77,7 +91,7 @@ export function DocumentEditor({ id, body, revision }: { id: string; body: JSONC
     } catch {
       failure.current = "retry";
       setStatus("Could not save. Your edits are still here.");
-      setCanRetry(true);
+      setRecovery("retry");
       return false;
     }
   }
@@ -97,6 +111,51 @@ export function DocumentEditor({ id, body, revision }: { id: string; body: JSONC
   function retry() {
     failure.current = null;
     void flush();
+  }
+
+  async function copyDraft() {
+    if (!editor) return;
+    try {
+      await navigator.clipboard.writeText(editor.getText());
+      setCopyStatus("Draft copied.");
+    } catch {
+      setCopyStatus("Could not copy automatically. Select and copy the text in the editor.");
+    }
+  }
+
+  async function reloadLatest() {
+    if (!editor || reloading || failure.current !== "conflict") return;
+    if (!window.confirm("Discard your unsaved edits and reload the latest saved version?")) return;
+
+    const draft = pending.current;
+    setReloading(true);
+    setStatus("Loading latest version…");
+    try {
+      const response = await fetch(`/api/documents/${id}`, { cache: "no-store" });
+      if (response.status === 401 || response.status === 404) {
+        stopSaving(response.status);
+        return;
+      }
+      if (!response.ok) throw new Error("Reload failed");
+      const latest = await response.json();
+
+      if (pending.current !== draft) {
+        setStatus("Your draft changed during reload. Reload again to discard those edits.");
+        return;
+      }
+
+      editor.commands.setContent(latest.body, { emitUpdate: false, errorOnInvalidContent: true });
+      savedRevision.current = latest.revision;
+      pending.current = null;
+      failure.current = null;
+      setRecovery(null);
+      setCopyStatus("");
+      setStatus("Saved");
+    } catch {
+      setStatus("Could not reload the latest version. Your draft is still here.");
+    } finally {
+      setReloading(false);
+    }
   }
 
   async function backToDocuments(event: MouseEvent<HTMLAnchorElement>) {
@@ -121,8 +180,15 @@ export function DocumentEditor({ id, body, revision }: { id: string; body: JSONC
       <div className="document-body"><EditorContent editor={editor} /></div>
       <div className="flex flex-wrap items-center gap-3">
         <span role="status">{status}</span>
-        {canRetry && <button type="button" onClick={retry}>Retry</button>}
+        {recovery === "retry" && <button type="button" onClick={retry}>Retry</button>}
+        {recovery && recovery !== "retry" && (
+          <button type="button" onClick={copyDraft}>Copy unsaved text</button>
+        )}
+        {recovery === "conflict" && (
+          <button type="button" onClick={reloadLatest} disabled={reloading}>Reload latest</button>
+        )}
       </div>
+      {copyStatus && <p role="status">{copyStatus}</p>}
       <a href="/dashboard" onClick={backToDocuments}>Back to documents</a>
     </>
   );
