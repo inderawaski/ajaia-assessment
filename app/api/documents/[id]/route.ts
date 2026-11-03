@@ -15,9 +15,10 @@ export async function GET(request: Request, { params }: RouteContext<"/api/docum
 
   const { id } = await params;
   if (!isDocumentId(id)) return missingDocument();
-  const document = await readDocument(session.user.id, id);
+  const document = await readDocument(session.user, id);
   if (!document) return missingDocument();
-  return Response.json(document, { headers: { "Cache-Control": "private, no-store" } });
+  const { id: documentId, title, body, revision } = document;
+  return Response.json({ id: documentId, title, body, revision }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
 export async function PATCH(request: Request, { params }: RouteContext<"/api/documents/[id]">) {
@@ -43,10 +44,10 @@ export async function PATCH(request: Request, { params }: RouteContext<"/api/doc
     return Response.json({ error: "Invalid document content." }, { status: 400 });
   }
 
-  const saved = await saveDocumentBody(session.user.id, id, body, revision);
+  const saved = await saveDocumentBody(session.user, id, body, revision);
   if (saved) return Response.json(saved);
 
-  const document = await readDocument(session.user.id, id);
+  const document = await readDocument(session.user, id);
   if (!document) return missingDocument();
   return Response.json({ error: "A newer version was saved. Copy your edits before reloading." }, { status: 409 });
 }

@@ -5,6 +5,7 @@ import { readDocument } from "@/backend/documents/store";
 import { requireSession } from "@/backend/session";
 import { DocumentEditor } from "@/frontend/documents/document-editor";
 
+import { DocumentSharing } from "@/frontend/documents/document-sharing";
 import { DocumentTitle } from "@/frontend/documents/document-title";
 
 export default function DocumentPage({ params }: PageProps<"/documents/[id]">) {
@@ -16,12 +17,13 @@ async function Content({ params }: Pick<PageProps<"/documents/[id]">, "params">)
   const { id } = await params;
   if (!isDocumentId(id)) notFound();
 
-  const document = await readDocument(user.id, id);
+  const document = await readDocument(user, id);
   if (!document) notFound();
 
   return (
     <main className="mx-auto grid w-full max-w-3xl gap-4 p-6">
-      <DocumentTitle key={id} id={id} initialTitle={document.title} canRename />
+      <DocumentTitle key={id} id={id} initialTitle={document.title} canRename={document.canRename} />
+      {document.canRename && <DocumentSharing key={id} id={id} />}
       <DocumentEditor key={id} id={id} body={document.body} revision={document.revision} />
     </main>
   );

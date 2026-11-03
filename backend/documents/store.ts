@@ -16,6 +16,16 @@ export async function listOwnedDocuments(ownerId: string) {
   return result.rows;
 }
 
+export async function listSharedDocuments(email: string) {
+  const { rows } = await db.query<Pick<Document, "id" | "title">>(
+    `SELECT documents.id, documents.title FROM document_grants
+     JOIN documents ON documents.id = document_grants.document_id
+     WHERE recipient_email = $1 ORDER BY documents.title, documents.id`,
+    [email.toLowerCase()],
+  );
+  return rows;
+}
+
 export async function createDocument(ownerId: string) {
   const { rows } = await db.query<Pick<Document, "id">>(
     "INSERT INTO documents (owner_id) VALUES ($1) RETURNING id",
@@ -24,20 +34,25 @@ export async function createDocument(ownerId: string) {
   return rows[0];
 }
 
-export async function readDocument(ownerId: string, id: string) {
-  const { rows } = await db.query<Document>(
-    "SELECT id, title, body, revision FROM documents WHERE owner_id = $1 AND id = $2",
-    [ownerId, id],
+export async function readDocument(user: { id: string; email: string }, id: string) {
+  const { rows } = await db.query<Document & { canRename: boolean }>(
+    `SELECT id, title, body, revision, owner_id = $1 AS "canRename"
+     FROM documents WHERE id = $2 AND (owner_id = $1 OR EXISTS (
+       SELECT 1 FROM document_grants WHERE document_id = $2 AND recipient_email = $3
+     ))`,
+    [user.id, id, user.email.toLowerCase()],
   );
   return rows[0];
 }
 
-export async function saveDocumentBody(ownerId: string, id: string, body: JSONContent, revision: number) {
+export async function saveDocumentBody(user: { id: string; email: string }, id: string, body: JSONContent, revision: number) {
   const { rows } = await db.query<Pick<Document, "revision">>(
     `UPDATE documents SET body = $3, revision = revision + 1
-     WHERE owner_id = $1 AND id = $2 AND revision = $4
+     WHERE id = $2 AND revision = $4 AND (owner_id = $1 OR EXISTS (
+       SELECT 1 FROM document_grants WHERE document_id = $2 AND recipient_email = $5 FOR KEY SHARE
+     ))
      RETURNING revision`,
-    [ownerId, id, JSON.stringify(body), revision],
+    [user.id, id, JSON.stringify(body), revision, user.email.toLowerCase()],
   );
   return rows[0];
 }

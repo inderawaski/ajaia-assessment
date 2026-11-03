@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { test } from "node:test";
+import { before, test } from "node:test";
 
-const origin = new URL(process.env.TEST_APP_URL ?? "http://localhost:3000").origin;
+const { origin, hostname } = new URL(process.env.TEST_APP_URL ?? "http://localhost:3000");
 
 async function request(path, { method = "GET", cookie, data, status } = {}) {
   const response = await fetch(origin + path, {
@@ -10,6 +10,7 @@ async function request(path, { method = "GET", cookie, data, status } = {}) {
     redirect: "manual",
     headers: {
       Origin: origin,
+      ...(hostname === "localhost" || hostname === "127.0.0.1" && { "X-Forwarded-For": "127.0.0.1" }),
       ...(cookie && { Cookie: cookie }),
       ...(data !== undefined && { "Content-Type": "application/json" }),
     },
@@ -19,8 +20,7 @@ async function request(path, { method = "GET", cookie, data, status } = {}) {
   return response;
 }
 
-async function account() {
-  const email = `smoke-${randomUUID()}@example.com`;
+async function account(email = `smoke-${randomUUID()}@example.com`) {
   const password = randomUUID();
   const signup = await request("/api/auth/sign-up/email", {
     method: "POST", data: { name: "Smoke test", email, password }, status: 200,
@@ -31,12 +31,18 @@ async function account() {
   });
   const cookie = signin.headers.getSetCookie().find((value) => value.includes("session_token="));
   assert.ok(cookie, "signin establishes a session");
-  return cookie.split(";")[0];
+  return { email, cookie: cookie.split(";")[0] };
 }
 
+let owner;
+let unrelated;
+
+before(async () => {
+  ({ cookie: owner } = await account());
+  ({ cookie: unrelated } = await account());
+});
+
 test("only the owner can reopen and update a private document", async () => {
-  const owner = await account();
-  const unrelated = await account();
   await request("/api/documents", { method: "POST", data: {}, status: 401 });
   const created = await request("/api/documents", { method: "POST", cookie: owner, data: {}, status: 201 });
   const { id } = await created.json();
@@ -87,4 +93,64 @@ test("only the owner can reopen and update a private document", async () => {
   const deniedHtml = await deniedPage.text();
   assert.ok(!deniedHtml.includes(text));
   assert.match(deniedHtml, /NEXT_HTTP_ERROR_FALLBACK;404|This page could not be found/);
+});
+
+test("an owner can grant and revoke a recipient's editing access", async () => {
+  const created = await request("/api/documents", { method: "POST", cookie: owner, data: {}, status: 201 });
+  const { id } = await created.json();
+  const api = `/api/documents/${id}`;
+  const page = `/documents/${id}`;
+  const grants = `${api}/grants`;
+  const text = `Shared content ${randomUUID()}`;
+  const body = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] };
+  const email = `smoke-${randomUUID()}@example.com`;
+  const grant = { method: "POST", data: { email } };
+  const revoke = { method: "DELETE", data: grant.data };
+
+  async function checkDenied(cookie, revision) {
+    await request(api, { cookie, status: 404 });
+    await request(api, { method: "PATCH", cookie, data: { body, revision }, status: 404 });
+    const dashboard = await request("/dashboard", { cookie, status: 200 });
+    assert.ok(!(await dashboard.text()).includes(page));
+    const denied = await request(page, { cookie });
+    const html = await denied.text();
+    assert.ok(!html.includes(text));
+    assert.match(html, /NEXT_HTTP_ERROR_FALLBACK;404|This page could not be found/);
+  }
+
+  await checkDenied(unrelated, 0);
+  await request(grants, { ...grant, status: 401 });
+  await Promise.all([
+    request(grants, { ...grant, cookie: owner, status: 204 }),
+    request(grants, { ...grant, cookie: owner, data: { email: ` ${email.toUpperCase()} ` }, status: 204 }),
+  ]);
+  assert.deepEqual(await (await request(grants, { cookie: owner, status: 200 })).json(), {
+    emails: [email],
+  });
+
+  const recipient = await account(email);
+  for (const cookie of [recipient.cookie, unrelated]) {
+    await request(grants, { cookie, status: 404 });
+    await request(grants, { ...grant, cookie, status: 404 });
+    await request(grants, { ...revoke, cookie, status: 404 });
+    await request(`${api}/title`, { method: "PATCH", cookie, data: { title: "Denied" }, status: 404 });
+  }
+  const dashboard = await request("/dashboard", { cookie: recipient.cookie, status: 200 });
+  assert.ok((await dashboard.text()).includes(`href="${page}"`));
+  const opened = await request(api, { cookie: recipient.cookie, status: 200 });
+  const { revision } = await opened.json();
+  const save = { method: "PATCH", cookie: recipient.cookie, data: { body, revision } };
+  await request(api, { ...save, status: 200 });
+  await request(api, { ...save, status: 409 });
+  const sharedPage = await request(page, { cookie: recipient.cookie, status: 200 });
+  const html = await sharedPage.text();
+  assert.ok(html.includes(text));
+  assert.ok(!html.includes("Share editing access"));
+  assert.deepEqual((await (await request(api, { cookie: owner, status: 200 })).json()).body, body);
+  await checkDenied(unrelated, revision + 1);
+
+  await request(grants, { ...revoke, cookie: owner, status: 204 });
+  assert.deepEqual(await (await request(grants, { cookie: owner, status: 200 })).json(), { emails: [] });
+  await checkDenied(recipient.cookie, revision + 1);
+  await checkDenied(unrelated, revision + 1);
 });
