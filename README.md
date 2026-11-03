@@ -15,8 +15,8 @@ Sign up with email and password to create and edit Tiptap documents. Owners can 
 2. Copy `.env.example` to `.env`. Set `DATABASE_URL` to the pooled Postgres connection string from the Neon **Connect** dialog. Generate `BETTER_AUTH_SECRET` with `openssl rand -base64 32`. Set `BETTER_AUTH_URL` to the app origin.
 3. Initialize the Better Auth tables with `npx auth@latest migrate --config backend/auth.ts`.
 4. Apply `db/documents.sql` to the same database using the Neon SQL Editor or `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/documents.sql` after exporting `DATABASE_URL` in your shell.
-   For an existing installation, reapply this file with the updated app to migrate existing grants from account IDs to email addresses.
-5. Run `npm run dev` and open http://localhost:3000.
+  For an existing installation, reapply this file with the updated app to migrate existing grants from account IDs to email addresses.
+5. Run `npm run dev` and open [http://localhost:3000](http://localhost:3000).
 
 Run `npm run lint`, `npx next typegen && npx tsc --noEmit`, and `npm run build` to check the project. If a restricted local environment prevents the Turbopack CSS worker from binding to a port, `npm run build -- --webpack` can verify compilation and serve the app for functional checks.
 
@@ -48,6 +48,8 @@ The server derives ownership from the Better Auth session. Postgres stores the b
 - [Tiptap with Next.js](https://tiptap.dev/docs/editor/getting-started/install/nextjs)
 - [Vercel environment variables](https://vercel.com/docs/environment-variables)
 
+
+
 ## Seed the reviewer demo
 
 With Node.js 22.9 or later, initialize the database and start the app before seeding. Set `DATABASE_URL` and `BETTER_AUTH_URL` for the same environment. Set `DEMO_OWNER_PASSWORD` and `DEMO_RECIPIENT_PASSWORD` to dedicated demo passwords of at least 12 characters, then run:
@@ -58,10 +60,12 @@ npm run seed:demo
 
 The command reads `.env` and `.env.local`. Exported variables take precedence. For a hosted demo, use the deployed app origin and its matching database. The command prints both document URLs.
 
-| Account | Email | Password |
-| --- | --- | --- |
-| Reviewer A | `reviewer-a@example.com` | `DEMO_OWNER_PASSWORD` |
-| Reviewer B | `reviewer-b@example.com` | `DEMO_RECIPIENT_PASSWORD` |
+
+| Account    | Email                    | Password     |
+| ---------- | ------------------------ | ------------ |
+| Reviewer 1 | `reviewer-1@example.com` | `reviewer-1` |
+| Reviewer 2 | `reviewer-2@example.com` | `reviewer-2` |
+
 
 Share the configured demo passwords with reviewers. Reruns require the original passwords, preserve existing document titles, bodies, and revisions, and restore B's grant on the shared fixture if it was revoked. Any grants added during a walkthrough stay in place, so revoke B's access to the private fixture at the end of the walkthrough.
 
@@ -76,4 +80,4 @@ Share the configured demo passwords with reviewers. Reruns require the original 
 
 Autosave sends one body revision at a time. A stale save preserves the draft and offers copying the unsaved text or reloading the latest version. A revoked grant stops autosave and leaves the draft available to copy. The assessment prioritizes persistence and access checks within the timebox. Collaboration uses saved revisions and reloads.
 
-Hosted reviewer verification is pending. Configure the Vercel origin and dedicated demo credentials before handing off the hosted walkthrough.
+The project author confirmed release verification. See [SUBMISSION.md](SUBMISSION.md) for the hosted URL and reviewer access details.

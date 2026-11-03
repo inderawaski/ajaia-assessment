@@ -42,7 +42,7 @@
 
 - Follow current official documentation for stack setup and integration. Keep credentials and auth secrets in environment variables.
 - Aim for two hours and stop at four. Deploy a working signup and persistence slice early when authorized. Prioritize required flows and verification ahead of visual polish.
-- Use ordinary Better Auth accounts with email/password and verification disabled. Enforce authentication and document access on every server read and write, including direct URLs. Owners manage titles and grants. Explicitly granted recipients can read and edit the body. Keep one grant per document and recipient.
+- Use ordinary Better Auth accounts with email/password and verification disabled. Enforce authentication and document access on every server read and write, including direct URLs. Owners manage titles and grants. Explicitly granted recipients can read and edit the body. Owners grant and revoke access by recipient email, including before signup. Match grants to the signed-in account’s normalized email and keep one grant per document and recipient email.
 - Store Tiptap JSON and a numeric body revision in Postgres. Check current access and the expected revision atomically on saves. Keep rename separate. Serialize client saves, preserve pending edits, and retain drafts on transient failure, conflict, or revoked access.
 - Import one UTF-8 TXT or Markdown file up to 1,000,000 bytes. Validate on both sides and treat embedded HTML as text. Use the same Tiptap format for edits and imports.
 - Verify access with owner, recipient, and unrelated accounts before grant, after grant, and after revocation. Before submission, run the hosted two-session walkthrough and document setup, seed, test commands, demo access, and remaining gaps.
