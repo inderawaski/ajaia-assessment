@@ -1,5 +1,6 @@
 "use client";
 
+import { DocumentImport } from "./document-import";
 import { useState } from "react";
 import { authClient } from "@/frontend/accounts/account-form";
 
@@ -36,6 +37,7 @@ export function DashboardActions() {
         // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Request fresh session and document state.
         window.location.assign("/");
       }, "Could not sign out. Try again.")}>Sign out</button>
+      <DocumentImport disabled={pending} />
       {error && <p role="alert" className="w-full">{error}</p>}
     </div>
   );

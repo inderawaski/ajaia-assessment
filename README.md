@@ -24,6 +24,14 @@ Run `npm run lint`, `npx next typegen && npx tsc --noEmit`, and `npm run build` 
 
 Import or link this project in Vercel as a Next.js app. Set `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL` for the target environment. Use the stable deployment origin for `BETTER_AUTH_URL`. Run both initialization steps above against the target Neon database before testing the deployment.
 
+## Import a document
+
+From the dashboard, choose **Import file** and select one UTF-8 `.txt` or `.md` file up to **1 MB (1,000,000 bytes inclusive)**. The editor opens a new private document titled from the filename. Text imports preserve paragraph breaks. Markdown imports preserve headings, bold, italic, and ordered and unordered lists. Embedded HTML appears as literal text.
+
+To verify both formats, import a text file with multiple paragraphs and a Markdown file with a heading, emphasis, lists, and HTML. Edit each document, wait for **Saved**, and reopen it from **Owned** to check that the edit and formatting persist.
+
+Run `node --experimental-strip-types --test tests/document-import.test.mjs` with Node.js 22 or later to check import validation and Tiptap conversion without a database. The integration suite below also exercises importing, editing, and reopening both formats.
+
 ## Verify document access
 
 On the target URL, sign up, create an **Untitled document**, enter text, and pause to let autosave run. Wait for **Saved**, then refresh and reopen from **Owned**. Confirm the title and text persist. Copy the document URL and open it from a separate browser session signed in as another account. Confirm the other account cannot find or open the document.

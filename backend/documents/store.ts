@@ -34,6 +34,14 @@ export async function createDocument(ownerId: string) {
   return rows[0];
 }
 
+export async function createImportedDocument(ownerId: string, title: string, body: JSONContent) {
+  const { rows } = await db.query<Pick<Document, "id">>(
+    "INSERT INTO documents (owner_id, title, body) VALUES ($1, $2, $3) RETURNING id",
+    [ownerId, title, JSON.stringify(body)],
+  );
+  return rows[0];
+}
+
 export async function readDocument(user: { id: string; email: string }, id: string) {
   const { rows } = await db.query<Document & { canRename: boolean }>(
     `SELECT id, title, body, revision, owner_id = $1 AS "canRename"

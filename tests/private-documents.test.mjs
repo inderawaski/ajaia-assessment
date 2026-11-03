@@ -154,3 +154,56 @@ test("an owner can grant and revoke a recipient's editing access", async () => {
   await checkDenied(recipient.cookie, revision + 1);
   await checkDenied(unrelated, revision + 1);
 });
+
+test("both import formats create private documents that can be edited and reopened", async () => {
+  async function upload(files, cookie, status) {
+    const body = new FormData();
+    for (const file of files) body.append("file", file);
+    const response = await fetch(origin + "/api/documents/import", {
+      method: "POST",
+      headers: { "X-Document-Import": "1", ...(cookie && { Cookie: cookie }) },
+      body,
+    });
+    assert.equal(response.status, status);
+    return response.json();
+  }
+
+  const textFile = new File(["First paragraph\n\nSecond paragraph"], "Imported text.txt");
+  const markdownFile = new File(["# Imported heading\n\n**Bold** and *italic*"], "Imported Markdown.md");
+  const dashboardBefore = await request("/dashboard", { cookie: owner, status: 200 });
+  const documentLinks = (html) => html.match(/href="\/documents\/[^"]+"/g) ?? [];
+  const before = documentLinks(await dashboardBefore.text());
+
+  await upload([textFile], undefined, 401);
+  await upload([textFile, markdownFile], owner, 400);
+  await upload([new File([Uint8Array.of(255)], "Invalid.md")], owner, 400);
+  const dashboardAfter = await request("/dashboard", { cookie: owner, status: 200 });
+  assert.deepEqual(documentLinks(await dashboardAfter.text()), before);
+
+  for (const [file, title, firstNodeType] of [
+    [textFile, "Imported text", "paragraph"],
+    [markdownFile, "Imported Markdown", "heading"],
+  ]) {
+    const { id } = await upload([file], owner, 201);
+    const page = `/documents/${id}`;
+    const api = `/api${page}`;
+    const opened = await (await request(api, { cookie: owner, status: 200 })).json();
+    assert.equal(opened.title, title);
+    assert.equal(opened.body.content[0].type, firstNodeType);
+    await request(api, { cookie: unrelated, status: 404 });
+
+    const body = opened.body;
+    body.content.push({ type: "paragraph", content: [{ type: "text", text: "Edited after import" }] });
+    await request(api, { method: "PATCH", cookie: owner, data: { body, revision: opened.revision }, status: 200 });
+    const editor = await request(page, { cookie: owner, status: 200 });
+    assert.match(await editor.text(), /Edited after import/);
+    const reopened = await (await request(api, { cookie: owner, status: 200 })).json();
+    assert.deepEqual(reopened.body.content[0], body.content[0]);
+    assert.deepEqual(reopened.body.content.at(-1), body.content.at(-1));
+
+    const dashboard = await request("/dashboard", { cookie: owner, status: 200 });
+    assert.ok(documentLinks(await dashboard.text()).includes(`href="${page}"`));
+    const unrelatedDashboard = await request("/dashboard", { cookie: unrelated, status: 200 });
+    assert.ok(!documentLinks(await unrelatedDashboard.text()).includes(`href="${page}"`));
+  }
+});
