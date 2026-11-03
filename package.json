@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:demo": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/seed-demo.mjs"
   },
   "dependencies": {
     "@tiptap/core": "^3.32.2",

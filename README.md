@@ -47,3 +47,33 @@ The server derives ownership from the Better Auth session. Postgres stores the b
 - [Better Auth Next.js integration](https://www.better-auth.com/docs/integrations/next)
 - [Tiptap with Next.js](https://tiptap.dev/docs/editor/getting-started/install/nextjs)
 - [Vercel environment variables](https://vercel.com/docs/environment-variables)
+
+## Seed the reviewer demo
+
+With Node.js 22.9 or later, initialize the database and start the app before seeding. Set `DATABASE_URL` and `BETTER_AUTH_URL` for the same environment. Set `DEMO_OWNER_PASSWORD` and `DEMO_RECIPIENT_PASSWORD` to dedicated demo passwords of at least 12 characters, then run:
+
+```sh
+npm run seed:demo
+```
+
+The command reads `.env` and `.env.local`. Exported variables take precedence. For a hosted demo, use the deployed app origin and its matching database. The command prints both document URLs.
+
+| Account | Email | Password |
+| --- | --- | --- |
+| Reviewer A | `reviewer-a@example.com` | `DEMO_OWNER_PASSWORD` |
+| Reviewer B | `reviewer-b@example.com` | `DEMO_RECIPIENT_PASSWORD` |
+
+Share the configured demo passwords with reviewers. Reruns require the original passwords, preserve existing document titles, bodies, and revisions, and restore B's grant on the shared fixture if it was revoked. Any grants added during a walkthrough stay in place, so revoke B's access to the private fixture at the end of the walkthrough.
+
+## Two-session walkthrough
+
+1. Sign in as A and B in separate browser profiles or use a regular window and a private window.
+2. Open **Reviewer walkthrough** from A's **Owned** list and B's **Shared with me** list. Edit as B, wait for **Saved**, then reload as A and check the change.
+3. As A, create a document, rename it, and apply a heading, bold text, and a list. Wait for **Saved**, return to the dashboard, and reopen it.
+4. As B, confirm **Private reviewer notes** is absent from the dashboard and that its direct URL is denied. As A, grant B access by email. Refresh B's dashboard and open the document from **Shared with me**.
+5. Leave B's editor open and revoke B's access as A. Edit as B and check that the save is rejected and **Copy unsaved text** is available. Reopen the URL as B and confirm access is denied.
+6. Import one TXT and one Markdown file. Check the initial titles, edit both, and reopen them after saving.
+
+Autosave sends one body revision at a time. A stale save preserves the draft and offers copying the unsaved text or reloading the latest version. A revoked grant stops autosave and leaves the draft available to copy. The assessment prioritizes persistence and access checks within the timebox. Collaboration uses saved revisions and reloads.
+
+Hosted reviewer verification is pending. Configure the Vercel origin and dedicated demo credentials before handing off the hosted walkthrough.
